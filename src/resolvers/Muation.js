@@ -5,6 +5,9 @@ import _ from 'lodash';
 import getUserId from '../utils/getUserId';
 import { secret } from '../utils/config';
 
+const generateToken = userId =>
+  jwt.sign({ userId }, secret, { expiresIn: '7 days' });
+
 export default {
   login: async (parent, { email, password }, { prisma }, info) => {
     try {
@@ -16,7 +19,7 @@ export default {
       if (!match) {
         throw new Error('Invalid user name and/or password');
       }
-      return { user, token: jwt.sign({ userId: user.id }, secret) };
+      return { user, token: generateToken(user.id) };
     } catch (err) {
       console.error(err);
       throw err;
@@ -40,7 +43,7 @@ export default {
       const user = await prisma.mutation.createUser({
         data: { name, email, password }
       });
-      return { user, token: jwt.sign({ userId: user.id }, secret) };
+      return { user, token: generateToken(user.id) };
     } catch (err) {
       console.error(err);
       throw err;
@@ -52,6 +55,12 @@ export default {
       const exists = await prisma.exists.User({ id: userId });
       if (!exists) {
         throw new Error('User not found');
+      }
+      if (data.password) {
+        if (data.password.trim().length < 8) {
+          throw new Error('Password must be 8 characters or longer');
+        }
+        data.password = await bcrypt.hash(data.password, 10);
       }
       const user = await prisma.mutation.updateUser(
         {
@@ -108,14 +117,18 @@ export default {
   updatePost: async (_, { id, data }, { prisma, req }, info) => {
     try {
       const userId = getUserId(req);
-      const exists = await prisma.exists.Post({ id, author: { id: userId } });
-      if (!exists) {
+      let [post] = await prisma.query.posts({
+        where: { id, author: { id: userId } }
+      });
+      if (!post) {
         throw new Error('Unable to update post');
       }
-      const post = await prisma.mutation.updatePost(
-        { where: { id }, data },
-        info
-      );
+      if (post.published && data.published === false) {
+        await prisma.mutation.deleteManyComments({
+          where: { post: { id } }
+        });
+      }
+      post = await prisma.mutation.updatePost({ where: { id }, data }, info);
       return post;
     } catch (err) {
       console.error(err);
@@ -139,9 +152,9 @@ export default {
   createComment: async (_, { data: { text, post } }, { prisma, req }, info) => {
     try {
       const userId = getUserId(req);
-      const exists = await prisma.exists.Post({ id: post });
+      const exists = await prisma.exists.Post({ id: post, published: true });
       if (!exists) {
-        throw new Error('Invalid post');
+        throw new Error('Unable to find post');
       }
       const comment = await prisma.mutation.createComment(
         {
@@ -201,14 +214,5 @@ export default {
       console.error(err);
       throw err;
     }
-    // const comment = db.comments.find(c => c.id === id);
-    // if (!comment) {
-    //   throw new Error('comment does not exist');
-    // }
-    // db.comments = db.comments.filter(c => c.id !== id);
-    // pubsub.publish(`comment_${comment.post}`, {
-    //   comment: { mutation: 'DELETED', data: comment }
-    // });
-    // return comment;
   }
 };

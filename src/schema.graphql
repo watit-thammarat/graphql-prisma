@@ -1,6 +1,7 @@
 type Subscription {
-  comment(postId: ID!): CommentSubscriptionLayload!
-  post: PostSubscriptionLayload!
+  comment(postId: ID!): CommentSubscriptionPayload!
+  post: PostSubscriptionPayload!
+  myPost: PostSubscriptionPayload!
 }
 
 input CreateUserInput {
@@ -12,6 +13,7 @@ input CreateUserInput {
 input UpdateUserInput {
   name: String
   email: String
+  password: String
 }
 
 input CreatePostInput {
@@ -38,9 +40,10 @@ input UpdateCommentInput {
 type Query {
   users(query: String): [User!]!
   posts(query: String): [Post!]!
+  myPosts(query: String): [Post!]!
   comments: [Comment!]!
   me: User!
-  post: Post!
+  post(id: ID!): Post!
 }
 
 type Mutation {
@@ -59,7 +62,7 @@ type Mutation {
 type User {
   id: ID!
   name: String!
-  email: String!
+  email: String
   password: String!
   posts: [Post!]!
   comments: [Comment!]!
@@ -81,12 +84,12 @@ type Comment {
   post: Post!
 }
 
-type PostSubscriptionLayload {
+type PostSubscriptionPayload {
   mutation: MutationType!
   node: Post
 }
 
-type CommentSubscriptionLayload {
+type CommentSubscriptionPayload {
   mutation: MutationType!
   node: Comment
 }

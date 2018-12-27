@@ -1,8 +1,27 @@
+import getUserId from '../utils/getUserId';
+
 export default {
-  posts: async ({ id }, args, { prisma }, info) => {
-    // return db.posts.filter(p => p.author === id);
+  email: {
+    fragment: 'fragment userId on User { id }',
+    resolve({ id, email }, args, { req }, info) {
+      const userId = getUserId(req, false);
+      return id === userId ? email : null;
+    }
   },
-  comments: async ({ id }, args, { prisma }, info) => {
-    // return db.comments.filter(c => c.author === id);
+
+  posts: {
+    fragment: 'fragment userId on User { id }',
+    resolve: async ({ id }, args, { prisma }, info) => {
+      const posts = await prisma.query.posts(
+        {
+          where: {
+            author: { id },
+            published: true
+          }
+        },
+        info
+      );
+      return posts;
+    }
   }
 };
