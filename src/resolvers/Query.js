@@ -1,8 +1,25 @@
 import getUserId from '../utils/getUserId';
 
 export default {
-  users: async (parent, { query = '' }, { prisma }, info) => {
+  users: async (
+    parent,
+    { query = '', first, skip, after, orderBy },
+    { prisma },
+    info
+  ) => {
     const options = {};
+    if (first) {
+      options.first = first;
+    }
+    if (skip) {
+      options.skip = skip;
+    }
+    if (after) {
+      options.after = after;
+    }
+    if (orderBy) {
+      options.orderBy = orderBy;
+    }
     if (query.trim().length > 0) {
       options.where = {
         OR: [{ name_contains: query.trim().toLowerCase() }]
@@ -16,10 +33,27 @@ export default {
       throw err;
     }
   },
-  myPosts: async (parent, { query = '' }, { prisma, req }, info) => {
+  myPosts: async (
+    parent,
+    { query = '', skip, first, after, orderBy },
+    { prisma, req },
+    info
+  ) => {
     try {
       const userId = getUserId(req);
-      const options = { where: { author: { id: userId } } };
+      const options = { where: { author: { id: userId } }, orderBy: 'id_ASC' };
+      if (first) {
+        options.first = first;
+      }
+      if (skip) {
+        options.skip = skip;
+      }
+      if (after) {
+        options.after = after;
+      }
+      if (orderBy) {
+        options.orderBy = orderBy;
+      }
       if (query.trim().length > 0) {
         options.where.OR = [
           { title_contains: query.trim().toLowerCase() },
@@ -33,9 +67,26 @@ export default {
       throw err;
     }
   },
-  posts: async (_, { query = '' }, { prisma }, info) => {
+  posts: async (
+    _,
+    { query = '', skip, first, after, orderBy },
+    { prisma },
+    info
+  ) => {
     try {
-      const options = { where: { published: true } };
+      const options = { orderBy: 'id_ASC', where: { published: true } };
+      if (first) {
+        options.first = first;
+      }
+      if (skip) {
+        options.skip = skip;
+      }
+      if (after) {
+        options.after = after;
+      }
+      if (orderBy) {
+        options.orderBy = orderBy;
+      }
       if (query.trim().length > 0) {
         options.where.OR = [
           { title_contains: query.trim().toLowerCase() },
@@ -50,9 +101,22 @@ export default {
       throw err;
     }
   },
-  comments: async (_, args, { prisma }, info) => {
+  comments: async (_, { skip, first, after, orderBy }, { prisma }, info) => {
     try {
-      const comments = await prisma.query.comments(null, info);
+      const options = { orderBy: 'id_ASC' };
+      if (first) {
+        options.first = first;
+      }
+      if (skip) {
+        options.skip = skip;
+      }
+      if (after) {
+        options.after = after;
+      }
+      if (orderBy) {
+        options.orderBy = orderBy;
+      }
+      const comments = await prisma.query.comments(options, info);
       return comments;
     } catch (err) {
       console.error(err);
